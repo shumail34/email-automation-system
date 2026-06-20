@@ -1,0 +1,96 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { BACKEND_URL } from '@/lib/backend';
+
+export async function POST(req: NextRequest) {
+  try {
+    const authHeader = req.headers.get('Authorization');
+    const body = await req.json();
+    const { email, leadIds } = body;
+
+    if (!email || !leadIds || !Array.isArray(leadIds)) {
+      return NextResponse.json({ error: 'Email and leadIds list are required' }, { status: 400 });
+    }
+
+    const djResponse = await fetch(`${BACKEND_URL}/api/jobs/enrich/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(authHeader ? { 'Authorization': authHeader } : {}),
+      },
+      body: JSON.stringify({
+        user_email: email,
+        lead_ids: leadIds,
+      }),
+    });
+
+    const data = await djResponse.json();
+    if (!djResponse.ok) {
+      return NextResponse.json({ error: data.error || 'Failed to start enrichment job' }, { status: djResponse.status });
+    }
+
+    return NextResponse.json(data);
+  } catch (error: any) {
+    console.error('BFF Enrich Job Error:', error);
+    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+  }
+}
+export async function GET(req: NextRequest) {
+  // Let's also support fetching enrichment job status by passing jobId query param
+  try {
+    const authHeader = req.headers.get('Authorization');
+    const { searchParams } = new URL(req.url);
+    const jobId = searchParams.get('jobId');
+
+    if (!jobId) {
+      return NextResponse.json({ error: 'jobId query parameter is required' }, { status: 400 });
+    }
+
+    const djResponse = await fetch(`${BACKEND_URL}/api/jobs/enrich/${jobId}/`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(authHeader ? { 'Authorization': authHeader } : {}),
+      },
+    });
+
+    const data = await djResponse.json();
+    if (!djResponse.ok) {
+      return NextResponse.json({ error: 'Failed to fetch enrichment job status' }, { status: djResponse.status });
+    }
+
+    return NextResponse.json(data);
+  } catch (error: any) {
+    console.error('BFF Get Enrich Status Error:', error);
+    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+  }
+}
+export async function PUT(req: NextRequest) {
+  // Cancel enrichment job
+  try {
+    const authHeader = req.headers.get('Authorization');
+    const { searchParams } = new URL(req.url);
+    const jobId = searchParams.get('jobId');
+
+    if (!jobId) {
+      return NextResponse.json({ error: 'jobId query parameter is required' }, { status: 400 });
+    }
+
+    const djResponse = await fetch(`${BACKEND_URL}/api/jobs/enrich/${jobId}/cancel/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(authHeader ? { 'Authorization': authHeader } : {}),
+      },
+    });
+
+    const data = await djResponse.json();
+    if (!djResponse.ok) {
+      return NextResponse.json({ error: 'Failed to cancel enrichment job' }, { status: djResponse.status });
+    }
+
+    return NextResponse.json(data);
+  } catch (error: any) {
+    console.error('BFF Cancel Enrich Error:', error);
+    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+  }
+}
