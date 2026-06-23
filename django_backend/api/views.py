@@ -137,19 +137,38 @@ def send_otp(request):
         msg.attach(MIMEText(html, 'html', 'utf-8'))
         
         port = int(config.port) if config.port else 465
-        if port == 465:
-            server = smtplib.SMTP_SSL(config.host, port, timeout=15)
-        else:
-            server = smtplib.SMTP(config.host, port, timeout=15)
-            server.starttls()
-            
-        server.login(config.smtp_user, config.smtp_pass)
-        server.send_message(msg)
-        server.quit()
+        last_error = None
+        sent = False
+
+        # Try the configured port first, then fallback to port 587
+        ports_to_try = [port]
+        if port == 465 and 587 not in ports_to_try:
+            ports_to_try.append(587)
+        elif port == 587 and 465 not in ports_to_try:
+            ports_to_try.append(465)
+
+        for try_port in ports_to_try:
+            try:
+                if try_port == 465:
+                    server = smtplib.SMTP_SSL(config.host, try_port, timeout=15)
+                else:
+                    server = smtplib.SMTP(config.host, try_port, timeout=15)
+                    server.starttls()
+                server.login(config.smtp_user, config.smtp_pass)
+                server.send_message(msg)
+                server.quit()
+                sent = True
+                break
+            except Exception as port_err:
+                last_error = port_err
+                continue
+
+        if not sent:
+            return Response({'message': f'SMTP failed: {str(last_error)}'}, status=500)
         
         return Response({'message': 'OTP sent'})
     except Exception as e:
-        return Response({'message': 'Failed to dispatch verification code. Please contact support.'}, status=500)
+        return Response({'message': f'Failed to dispatch verification code: {str(e)}'}, status=500)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
