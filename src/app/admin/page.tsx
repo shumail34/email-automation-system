@@ -713,33 +713,10 @@ export default function AdminPage() {
                         setSmtpError('Invalid email address.');
                         return;
                       }
-                      // Auto-test before saving
-                      setSmtpTesting(true);
-                      try {
-                        const res = await fetch('/api/send-email', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ config: systemConfig, to: user, subject: 'SMTP Test', body: 'test', testOnly: true })
-                        });
-                        const data = await res.json();
-                        if (!res.ok) {
-                          setSmtpStatus('error');
-                          setSmtpError(data.message || 'SMTP verification failed. Settings NOT saved.');
-                          setSmtpTesting(false);
-                          return;
-                        }
-                      } catch (e) {
-                        setSmtpStatus('error');
-                        setSmtpError('Network error. Settings NOT saved.');
-                        setSmtpTesting(false);
-                        return;
-                      }
-                      setSmtpTesting(false);
-                      setSmtpStatus('ok');
-                      setSmtpError('');
                       // Save to localStorage for fast access
                       localStorage.setItem('outreachpro_system_config', JSON.stringify(systemConfig));
                       // Also persist to Django backend so all browsers/sessions can read it
+                      setSmtpTesting(true);
                       try {
                         const existingList = await apiFetch('/config/');
                         const payload = { host: systemConfig.host, port: systemConfig.port, smtp_user: systemConfig.user, smtp_pass: systemConfig.pass, senderName: systemConfig.senderName };
@@ -756,13 +733,15 @@ export default function AdminPage() {
                             body: JSON.stringify(payload)
                           });
                         }
+                        setSmtpStatus('ok');
+                        setSmtpError('');
+                        showToast('✅ SMTP configuration saved!', 'success');
                       } catch (err: any) {
                         console.error("Failed to save config to backend:", err);
                         setSmtpStatus('error');
                         setSmtpError(err.message || 'Failed to save configuration to the database.');
-                        return;
                       }
-                      showToast('✅ SMTP verified & configuration saved!', 'success');
+                      setSmtpTesting(false);
                     }}
                     disabled={smtpTesting}
                     className="px-8 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm transition-all flex items-center gap-2 disabled:opacity-50"

@@ -3,6 +3,9 @@ import nodemailer from 'nodemailer';
 import { ImapFlow } from 'imapflow';
 import dns from 'dns';
 
+// Extend Vercel function timeout (works on Pro/Enterprise; Hobby is capped at 10s)
+export const maxDuration = 60;
+
 // Basic in-memory rate limiter (per server instance)
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT = 60; // max requests per minute per IP
@@ -78,9 +81,9 @@ export async function POST(request: Request) {
         user: config.user,
         pass: config.pass,
       },
-      connectionTimeout: 15000,   // increased to 15s
-      socketTimeout: 15000,       // increased to 15s
-      greetingTimeout: 15000,
+      connectionTimeout: 8000,   // 8s to stay within Vercel limits
+      socketTimeout: 8000,
+      greetingTimeout: 8000,
       tls: {
         rejectUnauthorized: false,
         minVersion: 'TLSv1.2',
@@ -92,7 +95,7 @@ export async function POST(request: Request) {
     try {
       await Promise.race([
         transporter.verify(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timed out. Check your gateway host.')), 15000))
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timed out after 8s. Check your host/port settings.')), 8000))
       ]);
       
       // If it's just a test, return now
