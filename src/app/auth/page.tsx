@@ -51,7 +51,8 @@ export default function AuthPage() {
 
     try {
       showToast('Sending verification code...', 'success');
-      const res = await fetch(`${BACKEND_URL}/api/send-otp/`, {
+      // Use Next.js route (runs on Vercel) instead of Django (Render blocks SMTP)
+      const res = await fetch('/api/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

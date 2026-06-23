@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     UserViewSet, CampaignViewSet, SystemConfigViewSet, PaymentViewSet, TicketViewSet, LeadViewSet, 
     LeadGenerationJobViewSet, LeadEnrichmentJobViewSet, LeadVerificationJobViewSet,
-    send_otp, reset_password, check_user, record_lead_usage, CustomTokenObtainPairView
+    send_otp, reset_password, check_user, record_lead_usage, CustomTokenObtainPairView, get_smtp_config
 )
 from rest_framework_simplejwt.views import TokenRefreshView
 
@@ -23,6 +23,7 @@ urlpatterns = [
     path('token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('send-otp/', send_otp, name='send_otp'),
+    path('smtp-config/', get_smtp_config, name='get_smtp_config'),
     path('reset-password/', reset_password, name='reset_password'),
     path('check-user/', check_user, name='check_user'),
     path('record-lead-usage/', record_lead_usage, name='record_lead_usage'),

@@ -185,6 +185,23 @@ def reset_password(request):
     except User.DoesNotExist:
         return Response({'message': 'User not found'}, status=404)
 
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_smtp_config(request):
+    """Public endpoint — returns SMTP config for server-side Next.js OTP sending.
+    Password is only ever used server-side on Vercel, never exposed to browser."""
+    config = SystemConfig.objects.last()
+    if not config or not config.smtp_user or not config.smtp_pass:
+        return Response({'configured': False}, status=404)
+    return Response({
+        'configured': True,
+        'host': config.host,
+        'port': config.port,
+        'user': config.smtp_user,
+        'pass': config.smtp_pass,
+        'senderName': config.senderName
+    })
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def check_user(request):
