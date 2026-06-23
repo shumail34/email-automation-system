@@ -136,7 +136,7 @@ export function useLeadGen({
             // Refresh leads and usage
             fetchUpdatedLeads();
             // Get updated count from backend to sync
-            const userRes = await fetch(`http://localhost:8000/api/users/?email=${encodeURIComponent(sessionUser || '')}`, {
+            const userRes = await fetch(`https://email-automation-system-4h0i.onrender.com/api/users/?email=${encodeURIComponent(sessionUser || '')}`, {
                headers: getAuthHeader()
             });
             if (userRes.ok) {

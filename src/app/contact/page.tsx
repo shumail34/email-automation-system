@@ -38,7 +38,7 @@ export default function ContactPage() {
     
     try {
       // 1. Post to Django API so Admin can see it in the DB
-      await fetch('http://localhost:8000/api/tickets/', {
+      await fetch('https://email-automation-system-4h0i.onrender.com/api/tickets/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
@@ -51,7 +51,7 @@ export default function ContactPage() {
         if (localCfg) {
           sysConfig = JSON.parse(localCfg);
         } else {
-          const cfgList = await fetch('http://localhost:8000/api/config/');
+          const cfgList = await fetch('https://email-automation-system-4h0i.onrender.com/api/config/');
           if (cfgList.ok) {
             const cfgData = await cfgList.json();
             if (cfgData && cfgData.length > 0) {
