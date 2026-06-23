@@ -726,6 +726,7 @@ export default function AdminPage() {
                       }
                       // Auto-test before saving
                       setSmtpTesting(true);
+                      let testPassed = false;
                       try {
                         const res = await fetch('/api/send-email', {
                           method: 'POST',
@@ -733,21 +734,21 @@ export default function AdminPage() {
                           body: JSON.stringify({ config: systemConfig, to: user, subject: 'SMTP Test', body: 'test', testOnly: true })
                         });
                         const data = await res.json();
-                        if (!res.ok) {
+                        if (res.ok) {
+                          testPassed = true;
+                          setSmtpStatus('ok');
+                          setSmtpError('');
+                        } else {
                           setSmtpStatus('error');
-                          setSmtpError(data.message || 'SMTP verification failed. Settings NOT saved.');
-                          setSmtpTesting(false);
-                          return;
+                          setSmtpError(data.message || 'SMTP verification failed.');
                         }
                       } catch (e) {
                         setSmtpStatus('error');
-                        setSmtpError('Network error. Settings NOT saved.');
-                        setSmtpTesting(false);
-                        return;
+                        setSmtpError('Network error during SMTP verification.');
                       }
+
                       setSmtpTesting(false);
-                      setSmtpStatus('ok');
-                      setSmtpError('');
+                      
                       // Save to localStorage for fast access
                       localStorage.setItem('outreachpro_system_config', JSON.stringify(systemConfig));
                       // Also persist to Django backend so all browsers/sessions can read it
@@ -771,7 +772,12 @@ export default function AdminPage() {
                           });
                         }
                       } catch (_) {}
-                      showToast('✅ SMTP verified & configuration saved!', 'success');
+
+                      if (testPassed) {
+                        showToast('✅ SMTP verified & configuration saved!', 'success');
+                      } else {
+                        showToast('⚠️ Settings saved, but SMTP connection failed. Check credentials.', 'error');
+                      }
                     }}
                     disabled={smtpTesting}
                     className="px-8 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm transition-all flex items-center gap-2 disabled:opacity-50"
