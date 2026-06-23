@@ -430,14 +430,19 @@ export default function EmailAutomator() {
     const usageKey = `outreachpro_usage_${sessionUser || 'guest'}`;
     const savedUsage = localStorage.getItem(usageKey);
     if (savedUsage) {
-      const { date, count } = JSON.parse(savedUsage);
-      const today = new Date().toISOString().split('T')[0];
-      if (date === today) {
-        setDailyUsage(count);
-        setLastSentDate(date);
-      } else {
+      try {
+        const { date, count } = JSON.parse(savedUsage);
+        const today = new Date().toISOString().split('T')[0];
+        if (date === today) {
+          setDailyUsage(count);
+          setLastSentDate(date);
+        } else {
+          setDailyUsage(0);
+          setLastSentDate(today);
+        }
+      } catch (err) {
         setDailyUsage(0);
-        setLastSentDate(today);
+        setLastSentDate(new Date().toISOString().split('T')[0]);
       }
     } else {
       setLastSentDate(new Date().toISOString().split('T')[0]);
