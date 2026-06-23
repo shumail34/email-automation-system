@@ -22,6 +22,43 @@ class User(AbstractUser):
     leads_generated_count = models.IntegerField(default=0)
     leads_generated_month = models.CharField(max_length=7, default='')  # e.g. '2026-06'
 
+    def save(self, *args, **kwargs):
+        p = self.plan.lower()
+        if p == 'starter':
+            self.emailLimit = 500
+            self.dailyLimit = 2000
+            self.monthlyLimit = 60000
+            self.templateLimit = 5
+            self.attachments = True
+        elif p == 'pro':
+            self.emailLimit = -1
+            self.dailyLimit = -1
+            self.monthlyLimit = -1
+            self.templateLimit = -1
+            self.attachments = True
+        elif p == 'agency':
+            self.emailLimit = -1
+            self.dailyLimit = -1
+            self.monthlyLimit = -1
+            self.templateLimit = -1
+            self.teamLimit = -1
+            self.attachments = True
+        elif p == 'admin':
+            self.emailLimit = -1
+            self.dailyLimit = -1
+            self.monthlyLimit = -1
+            self.templateLimit = -1
+            self.teamLimit = -1
+            self.attachments = True
+        else: # free
+            self.emailLimit = 50
+            self.dailyLimit = 50
+            self.monthlyLimit = 1500
+            self.templateLimit = 1
+            self.attachments = False
+
+        super().save(*args, **kwargs)
+
 class Campaign(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='campaigns')
     date = models.DateTimeField(auto_now_add=True)
@@ -88,7 +125,7 @@ class Payment(models.Model):
                         user = User.objects.filter(email__iexact=self.email).first()
                         if user:
                             user.plan = self.plan.lower()
-                            user.save(update_fields=['plan'])
+                            user.save() # trigger the overridden save to update limits
                     elif self.status == 'rejected':
                         msg['Subject'] = "OutreachPro - Payment Rejected"
                         text = f"We could not verify your payment proof for the {self.plan.upper()} plan.\nPlease double check your transaction ID and resubmit, or contact our support team."
