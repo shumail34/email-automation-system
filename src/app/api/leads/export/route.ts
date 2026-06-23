@@ -9,18 +9,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No leads provided' }, { status: 400 });
     }
 
-    // Format leads for export
+    // Format leads for export (headers perfectly mapped to Campaign requirements)
     const exportData = leads.map((lead: any) => ({
       'Business Name': lead.business_name || '',
-      'Owner Name': lead.owner_name || '',
+      'First Name': lead.owner_name ? lead.owner_name.split(' ')[0] : '',
+      'Last Name': lead.owner_name ? lead.owner_name.split(' ').slice(1).join(' ') : '',
+      'Location Name': lead.address ? lead.address.split(',').slice(-2, -1)[0]?.trim() || '' : '',
       'Email': lead.email || '',
-      'Phone': lead.phone || '',
       'Website': lead.website || '',
-      'Address': lead.address || '',
-      'Category': lead.category || '',
+      'Phone': lead.phone || '',
+      'Industry': lead.category || '',
+      'Full Address': lead.address || '',
+      'Owner Name': lead.owner_name || '',
       'Rating': lead.rating || '',
       'Lead Score': lead.lead_score || 0,
-      'Source': lead.source || '',
     }));
 
     if (format === 'csv') {
