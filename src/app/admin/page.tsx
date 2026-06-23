@@ -656,7 +656,15 @@ export default function AdminPage() {
                       <AlertCircle size={16} /> SMTP Connection Failed
                     </div>
                     <p className="text-red-400/80 text-xs font-medium">{smtpError}</p>
-                    <p className="text-slate-500 text-[10px] mt-2">Check your App Password, port, and that 2FA + App Passwords are enabled on Google.</p>
+                    <p className="text-slate-500 text-[10px] mt-2">
+                      {systemConfig.host.toLowerCase().includes('gmail') ? (
+                        "Check your App Password, port, and that 2FA + App Passwords are enabled on Google."
+                      ) : systemConfig.host.toLowerCase().includes('hostinger') ? (
+                        "For Hostinger: 1. Confirm your password is correct (try logging into mail.hostinger.com webmail). 2. Check if your mail account is suspended in Hostinger hPanel (Emails -> Manage). 3. Ensure 'Suspend sending' is disabled."
+                      ) : (
+                        "Check your port, verify the password (or App Password if using 2FA/OAuth), and make sure SMTP access is enabled on your email provider."
+                      )}
+                    </p>
                   </div>
                 )}
 
