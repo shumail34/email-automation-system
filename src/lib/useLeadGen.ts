@@ -180,11 +180,21 @@ export function useLeadGen({
     setGenerationProgress(0);
 
     try {
+      let requestedLimit = leadLimit;
       const planMax = userPlan.leadGenLimit;
-      if (planMax !== -1 && monthlyLeadUsage >= planMax) {
-        showToast(`Monthly limit reached. Your plan allows ${planMax} leads/month.`, 'error');
-        setIsGenerating(false);
-        return;
+      
+      if (planMax !== -1) {
+        const remaining = planMax - monthlyLeadUsage;
+        if (remaining <= 0) {
+          showToast(`Monthly limit reached. Your plan allows max ${planMax} leads/month. Upgrade to increase limits.`, 'error');
+          setIsGenerating(false);
+          return;
+        }
+        if (requestedLimit > remaining) {
+          requestedLimit = remaining;
+          showToast(`Adjusted request to ${remaining} (your remaining allowance).`, 'info');
+          setLeadLimit(remaining);
+        }
       }
 
       const res = await fetch('/api/leads/jobs/generate', {
@@ -197,7 +207,7 @@ export function useLeadGen({
           email: sessionUser,
           category: leadCategory,
           location: leadLocation,
-          limit: leadLimit,
+          limit: requestedLimit,
           sourceMode: sourceMode,
         }),
       });
