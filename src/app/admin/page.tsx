@@ -653,15 +653,7 @@ export default function AdminPage() {
                       <AlertCircle size={16} /> SMTP Connection Failed
                     </div>
                     <p className="text-red-400/80 text-xs font-medium">{smtpError}</p>
-                    <p className="text-slate-500 text-[10px] mt-2">
-                      {systemConfig.host.toLowerCase().includes('gmail') ? (
-                        "Check your App Password, port, and that 2FA + App Passwords are enabled on Google."
-                      ) : systemConfig.host.toLowerCase().includes('hostinger') ? (
-                        "For Hostinger: 1. Confirm your password is correct (try logging into mail.hostinger.com webmail). 2. Check if your mail account is suspended in Hostinger hPanel (Emails -> Manage). 3. Ensure 'Suspend sending' is disabled."
-                      ) : (
-                        "Check your port, verify the password (or App Password if using 2FA/OAuth), and make sure SMTP access is enabled on your email provider."
-                      )}
-                    </p>
+                    <p className="text-slate-500 text-[10px] mt-2">Check your App Password, port, and that 2FA + App Passwords are enabled on Google.</p>
                   </div>
                 )}
 
@@ -723,7 +715,6 @@ export default function AdminPage() {
                       }
                       // Auto-test before saving
                       setSmtpTesting(true);
-                      let testPassed = false;
                       try {
                         const res = await fetch('/api/send-email', {
                           method: 'POST',
@@ -731,21 +722,21 @@ export default function AdminPage() {
                           body: JSON.stringify({ config: systemConfig, to: user, subject: 'SMTP Test', body: 'test', testOnly: true })
                         });
                         const data = await res.json();
-                        if (res.ok) {
-                          testPassed = true;
-                          setSmtpStatus('ok');
-                          setSmtpError('');
-                        } else {
+                        if (!res.ok) {
                           setSmtpStatus('error');
-                          setSmtpError(data.message || 'SMTP verification failed.');
+                          setSmtpError(data.message || 'SMTP verification failed. Settings NOT saved.');
+                          setSmtpTesting(false);
+                          return;
                         }
                       } catch (e) {
                         setSmtpStatus('error');
-                        setSmtpError('Network error during SMTP verification.');
+                        setSmtpError('Network error. Settings NOT saved.');
+                        setSmtpTesting(false);
+                        return;
                       }
-
                       setSmtpTesting(false);
-                      
+                      setSmtpStatus('ok');
+                      setSmtpError('');
                       // Save to localStorage for fast access
                       localStorage.setItem('outreachpro_system_config', JSON.stringify(systemConfig));
                       // Also persist to Django backend so all browsers/sessions can read it
@@ -765,13 +756,13 @@ export default function AdminPage() {
                             body: JSON.stringify(payload)
                           });
                         }
-                      } catch (_) {}
-
-                      if (testPassed) {
-                        showToast('✅ SMTP verified & configuration saved!', 'success');
-                      } else {
-                        showToast('⚠️ Settings saved, but SMTP connection failed. Check credentials.', 'error');
+                      } catch (err: any) {
+                        console.error("Failed to save config to backend:", err);
+                        setSmtpStatus('error');
+                        setSmtpError(err.message || 'Failed to save configuration to the database.');
+                        return;
                       }
+                      showToast('✅ SMTP verified & configuration saved!', 'success');
                     }}
                     disabled={smtpTesting}
                     className="px-8 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm transition-all flex items-center gap-2 disabled:opacity-50"

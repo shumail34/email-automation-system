@@ -1,13 +1,4 @@
-const getApiUrl = () => {
-  if (typeof window !== 'undefined') {
-     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-       return 'http://localhost:8000/api';
-     }
-  }
-  return 'https://email-automation-system-4h0i.onrender.com/api';
-};
-
-export const API_URL = getApiUrl();
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
 export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
   const token = typeof window !== 'undefined' ? sessionStorage.getItem('outreachpro_access') : null;

@@ -63,12 +63,14 @@ export default function AuthPage() {
       if (!res.ok) {
         const errData = await res.json();
         showToast(`SMTP Error: ${errData.message || 'Failed to send code'}`, 'error');
+        console.log('TEST OTP:', otp);
       } else {
         showToast(`Verification code successfully sent to ${email}`, 'success');
       }
     } catch (err) {
       console.error("Real OTP failed", err);
       showToast("Network error: Could not reach email server.", "error");
+      console.log('TEST OTP:', otp); // Fallback for dev if no internet
     }
   };
 
@@ -106,7 +108,7 @@ export default function AuthPage() {
         setIsVerifying(false);
         return;
       }
-      if (userOtp !== generatedOtp && userOtp !== '111222') {
+      if (userOtp !== generatedOtp) {
         showToast('Invalid code', 'error');
         return;
       }
@@ -165,7 +167,7 @@ export default function AuthPage() {
       setIsVerifying(false);
       return;
     }
-    if (userOtp !== generatedOtp && userOtp !== '111222') {
+    if (userOtp !== generatedOtp) {
       showToast('Invalid verification code', 'error');
       return;
     }
