@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { type UserPlan } from './plans';
+import { BACKEND_URL } from './backend';
 
 interface EmailData {
   'Business Name': string;
@@ -135,9 +136,10 @@ export function useLeadGen({
             showToast(`Generated ${data.processed_items} leads successfully!`, 'success');
             // Refresh leads and usage
             fetchUpdatedLeads();
-            // Get updated count from backend to sync
-            const userRes = await fetch(`http://localhost:8000/api/users/?email=${encodeURIComponent(sessionUser || '')}`, {
-               headers: getAuthHeader()
+            // Check if user reached limit
+            const userRes = await fetch(`${BACKEND_URL}/api/users/?email=${encodeURIComponent(sessionUser || '')}`, {
+              cache: 'no-store',
+              headers: getAuthHeader()
             });
             if (userRes.ok) {
               const uList = await userRes.json();
