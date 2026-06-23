@@ -97,15 +97,12 @@ export default function AdminPage() {
           setSystemConfig(JSON.parse(savedSys));
         } else {
           try {
-            const cfgList = await fetch(`${BACKEND_URL}/api/config/`);
-            if (cfgList.ok) {
-              const cfgData = await cfgList.json();
-              if (cfgData && cfgData.length > 0) {
-                const cfg = cfgData[cfgData.length - 1];
-                const mapped = { host: cfg.host, port: cfg.port, user: cfg.smtp_user, pass: cfg.smtp_pass, senderName: cfg.senderName };
-                setSystemConfig(mapped);
-                localStorage.setItem('outreachpro_system_config', JSON.stringify(mapped));
-              }
+            const cfgData = await apiFetch('/config/');
+            if (cfgData && cfgData.length > 0) {
+              const cfg = cfgData[cfgData.length - 1];
+              const mapped = { host: cfg.host, port: cfg.port, user: cfg.smtp_user, pass: cfg.smtp_pass, senderName: cfg.senderName };
+              setSystemConfig(mapped);
+              localStorage.setItem('outreachpro_system_config', JSON.stringify(mapped));
             }
           } catch (_) {}
         }
@@ -753,21 +750,18 @@ export default function AdminPage() {
                       localStorage.setItem('outreachpro_system_config', JSON.stringify(systemConfig));
                       // Also persist to Django backend so all browsers/sessions can read it
                       try {
-                        const existingCfg = await fetch(`${BACKEND_URL}/api/config/`);
-                        const existingList = existingCfg.ok ? await existingCfg.json() : [];
+                        const existingList = await apiFetch('/config/');
                         const payload = { host: systemConfig.host, port: systemConfig.port, smtp_user: systemConfig.user, smtp_pass: systemConfig.pass, senderName: systemConfig.senderName };
                         if (existingList && existingList.length > 0) {
                           // Update the last config record
-                          await fetch(`${BACKEND_URL}/api/config/${existingList[existingList.length - 1].id}/`, {
+                          await apiFetch(`/config/${existingList[existingList.length - 1].id}/`, {
                             method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(payload)
                           });
                         } else {
                           // Create a new config record
-                          await fetch(`${BACKEND_URL}/api/config/`, {
+                          await apiFetch('/config/', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(payload)
                           });
                         }
