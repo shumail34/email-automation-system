@@ -220,7 +220,7 @@ export function useEmailSender({
 
           setDailyUsage(prev => {
             const newUsage = prev + 1;
-            const usageKey = `outreachpro_daily_${sessionUser || 'guest'}`;
+            const usageKey = `outreachpro_usage_${sessionUser || 'guest'}`;
             localStorage.setItem(usageKey, JSON.stringify({ date: today, count: newUsage }));
             if (userPlan.dailyLimit !== -1 && newUsage >= userPlan.dailyLimit) {
               stopRequestedRef.current = true;

@@ -466,7 +466,7 @@ export default function EmailAutomator() {
       const userKey = sessionUser || 'guest';
       localStorage.setItem(`email_automator_config_saas_final_${userKey}`, JSON.stringify(config));
     }
-  }, [config, sessionUser]);
+  }, [config]);
 
   useEffect(() => {
     if (isDataLoaded.current) {
@@ -474,7 +474,7 @@ export default function EmailAutomator() {
       // IndexedDB via localforage — no size limit worries!
       saveUserData(userKey, 'email_automator_data', data);
     }
-  }, [data, sessionUser]);
+  }, [data]);
 
   useEffect(() => {
     // Fetch campaign history from Django (scoped to the logged-in user via email)
@@ -519,7 +519,7 @@ export default function EmailAutomator() {
         return next;
       });
     }
-  }, [template, subject, activeTemplateId, sessionUser]);
+  }, [template, subject, activeTemplateId]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
