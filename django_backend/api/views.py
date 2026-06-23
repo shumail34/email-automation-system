@@ -149,7 +149,12 @@ def send_otp(request):
         
         return Response({'message': 'OTP sent'})
     except Exception as e:
-        return Response({'message': 'Failed to dispatch verification code. Please contact support.'}, status=500)
+        print("\n=== SMTP OTP DISPATCH FAILURE ===")
+        print(f"Target Email: {email_to}")
+        print(f"Verification OTP Code: {otp}")
+        print(f"SMTP Error details: {e}")
+        print("=================================\n")
+        return Response({'message': f'Failed to dispatch verification code. Please check your console or inspect logs. Code: {otp}'}, status=500)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
