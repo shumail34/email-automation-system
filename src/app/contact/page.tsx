@@ -52,28 +52,35 @@ export default function ContactPage() {
         if (localCfg) {
           sysConfig = JSON.parse(localCfg);
         } else {
-          const cfgList = await fetch(`${BACKEND_URL}/api/config/`);
+          const cfgList = await fetch(`${BACKEND_URL}/api/smtp-config/`);
           if (cfgList.ok) {
             const cfgData = await cfgList.json();
-            if (cfgData && cfgData.length > 0) {
-              const cfg = cfgData[cfgData.length - 1];
-              sysConfig = { host: cfg.host, port: cfg.port, user: cfg.smtp_user, pass: cfg.smtp_pass, senderName: cfg.senderName };
+            if (cfgData && cfgData.configured) {
+              sysConfig = { host: cfgData.host, port: cfgData.port, user: cfgData.user, pass: cfgData.pass, senderName: cfgData.senderName };
             }
           }
         }
       } catch (_) {}
 
       if (sysConfig) {
-        await fetch('/api/send-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            config: sysConfig,
-            to: sysConfig.user, // send to admin's own email
-            subject: `New Support Query: ${formData.subject}`,
-            body: `You received a new query from ${formData.name} (${formData.email}):\n\n${formData.message}`
-          })
-        });
+        try {
+          const mailRes = await fetch('/api/send-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              config: sysConfig,
+              to: sysConfig.user, // send to admin's own email
+              subject: `New Support Query: ${formData.subject}`,
+              body: `You received a new query from ${formData.name} (${formData.email}):\n\n${formData.message}`
+            })
+          });
+          if (!mailRes.ok) {
+            const errBody = await mailRes.text();
+            console.error('Email failed to send:', errBody);
+          }
+        } catch (mailErr) {
+          console.error('Mail fetch error:', mailErr);
+        }
       }
 
       showToast('Message sent! Our team will contact you soon.');

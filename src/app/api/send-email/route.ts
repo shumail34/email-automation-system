@@ -91,19 +91,20 @@ export async function POST(request: Request) {
       },
     });
 
-    // Verify connection with a hard 15s timeout
+    // Verify connection (soft check, don't fail immediately to allow fallback port)
     try {
-      await Promise.race([
-        transporter.verify(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timed out after 8s. Check your host/port settings.')), 8000))
-      ]);
-      
-      // If it's just a test, return now
       if (testOnly) {
+        await Promise.race([
+          transporter.verify(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timed out after 8s.')), 8000))
+        ]);
         return NextResponse.json({ message: 'SMTP connection verified successfully' });
       }
     } catch (verifyError: any) {
-      return NextResponse.json({ message: 'Mail server connection failed. Please verify your transmission credentials.' }, { status: 401 });
+      if (testOnly) {
+        // Only fail hard if it's a test button click
+        return NextResponse.json({ message: 'Mail server connection failed. Please verify your transmission credentials.' }, { status: 401 });
+      }
     }
 
     const fingerprint = `<div style="display:none; font-size:1px; color:#ffffff; opacity:0; visibility:hidden; height:0; width:0;">${Math.random().toString(36).substring(7)}</div>`;
@@ -139,9 +140,30 @@ export async function POST(request: Request) {
 
 
     // Send the email via SMTP
-    const info = await transporter.sendMail(mailOptions);
+    let info;
+    try {
+      info = await transporter.sendMail(mailOptions);
+    } catch (sendErr: any) {
+      // Try fallback port
+      const fallbackPort = port === 465 ? 587 : 465;
+      const fallbackTransporter = nodemailer.createTransport({
+        host: resolvedHost,
+        port: fallbackPort,
+        secure: fallbackPort === 465,
+        auth: { user: config.user, pass: config.pass },
+        connectionTimeout: 8000,
+        socketTimeout: 8000,
+        tls: { rejectUnauthorized: false, servername: config.host || 'smtp.gmail.com' }
+      });
+      
+      try {
+        info = await fallbackTransporter.sendMail(mailOptions);
+      } catch (fallbackErr) {
+        throw new Error('Email was rejected by the server on both ports');
+      }
+    }
     
-    if (!info.accepted || info.accepted.length === 0) {
+    if (!info || !info.accepted || info.accepted.length === 0) {
       throw new Error('Email was rejected by the server');
     }
 
