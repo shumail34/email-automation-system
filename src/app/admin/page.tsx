@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Shield, Plus, Trash2, Crown, Rocket, Building2, Zap,
   Search, CheckCircle2, AlertCircle, Lock, Eye, EyeOff,
-  Users, RefreshCw, LogOut, Edit2, X, Save, Image as ImageIcon, MessageSquare
+  Users, RefreshCw, LogOut, Edit2, X, Save, Image as ImageIcon, MessageSquare, Menu
 } from 'lucide-react';
 
 import { lookupUserPlan, DEFAULT_FREE_PLAN, PLAN_LABELS, PLAN_COLORS, generateIntegrityHash } from '../../lib/plans';
@@ -70,6 +70,7 @@ export default function AdminPage() {
   const [smtpStatus, setSmtpStatus] = useState<'idle' | 'ok' | 'error'>('idle');
   const [smtpError, setSmtpError] = useState('');
   const [showSmtpPass, setShowSmtpPass] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const ok = sessionStorage.getItem('admin_authed');
@@ -316,54 +317,103 @@ export default function AdminPage() {
     }).length,
   };
 
+  const pendingPayments = payments.filter(p => p.status === 'pending').length;
+  const pendingTickets = tickets.filter(t => t.status !== 'resolved').length;
+
   /* ── Authorization Gate ── */
   if (!authed) return (
-    <div className="min-h-screen bg-bg-base flex items-center justify-center" suppressHydrationWarning>
+    <div className="min-h-screen bg-bg-base flex items-center justify-center px-4" suppressHydrationWarning>
       <div className="flex flex-col items-center gap-4">
         <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
           <Shield size={32} className="text-indigo-500/50" />
         </motion.div>
-        <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Verifying Administrator Session...</p>
+        <p className="text-slate-500 text-xs font-bold uppercase tracking-widest text-center">Verifying Administrator Session...</p>
       </div>
     </div>
   );
+
+  const TABS = [
+    { id: 'users', label: 'Users', badge: 0 },
+    { id: 'payments', label: 'Payments', badge: pendingPayments },
+    { id: 'support', label: 'Support', badge: pendingTickets },
+    { id: 'settings', label: 'Settings', badge: 0 },
+  ] as const;
 
   /* ── Admin Dashboard ── */
   return (
     <div className="min-h-screen bg-bg-base text-slate-200" style={{ fontFamily: "'Inter', sans-serif" }} suppressHydrationWarning>
 
-
       {/* Navbar */}
       <nav className="sticky top-0 z-50 border-b border-border-base bg-bg-nav backdrop-blur-lg">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+          {/* Brand */}
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center flex-shrink-0">
               <Shield size={16} className="text-white" />
             </div>
-            <div>
+            <div className="min-w-0">
               <span className="font-black text-slate-100 text-sm">Admin Panel</span>
-              <span className="text-slate-600 text-xs ml-2">OutreachPro</span>
+              <span className="text-slate-600 text-xs ml-2 hidden sm:inline">OutreachPro</span>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+
+          {/* Desktop Actions */}
+          <div className="hidden sm:flex items-center gap-2 sm:gap-3">
             <ThemeToggle />
             <motion.button
               whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
               onClick={() => setShowAddModal(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-all"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-all"
             >
-              <Plus size={14} /> Add User
+              <Plus size={14} /> <span className="hidden sm:inline">Add User</span>
             </motion.button>
-            <button onClick={logout} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100/5 hover:bg-slate-100/10 text-slate-400 hover:text-slate-100 text-xs font-bold transition-all">
-              <LogOut size={14} /> Logout
+            <button onClick={logout} className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl bg-slate-100/5 hover:bg-slate-100/10 text-slate-400 hover:text-slate-100 text-xs font-bold transition-all">
+              <LogOut size={14} /> <span className="hidden sm:inline">Logout</span>
+            </button>
+          </div>
+
+          {/* Mobile Hamburger */}
+          <div className="flex sm:hidden items-center gap-2">
+            <ThemeToggle />
+            <button
+              onClick={() => setMobileMenuOpen(v => !v)}
+              className="w-9 h-9 rounded-xl bg-slate-100/5 flex items-center justify-center text-slate-400 hover:text-slate-100 transition-all"
+            >
+              {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
             </button>
           </div>
         </div>
+
+        {/* Mobile Dropdown Menu */}
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="sm:hidden border-t border-border-base bg-bg-nav px-4 py-3 space-y-2 overflow-hidden"
+            >
+              <button
+                onClick={() => { setShowAddModal(true); setMobileMenuOpen(false); }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm transition-all"
+              >
+                <Plus size={16} /> Add User
+              </button>
+              <button
+                onClick={() => { logout(); setMobileMenuOpen(false); }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-100/5 hover:bg-slate-100/10 text-slate-400 hover:text-slate-100 font-bold text-sm transition-all"
+              >
+                <LogOut size={16} /> Logout
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </nav>
 
-      <div className="max-w-7xl mx-auto px-6 py-10">
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-10">
           {[
             { label: 'Total Users', value: stats.total, icon: <Users size={18} />, color: 'indigo' },
             { label: 'Pro / Agency', value: stats.pro, icon: <Crown size={18} />, color: 'violet' },
@@ -371,61 +421,51 @@ export default function AdminPage() {
             { label: 'Expiring Soon', value: stats.expiring, icon: <AlertCircle size={18} />, color: 'amber' },
           ].map((s, i) => (
             <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
-              className="p-5 rounded-2xl bg-slate-100/3 border border-slate-100/8">
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-3 ${
+              className="p-4 sm:p-5 rounded-2xl bg-slate-100/3 border border-slate-100/8">
+              <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center mb-3 ${
                 s.color === 'indigo' ? 'bg-indigo-500/15 text-indigo-400' :
                 s.color === 'violet' ? 'bg-violet-500/15 text-violet-400' :
                 s.color === 'blue' ? 'bg-blue-500/15 text-blue-400' : 'bg-amber-500/15 text-amber-400'}`}>
                 {s.icon}
               </div>
-              <p className="text-2xl font-black text-slate-100">{s.value}</p>
-              <p className="text-slate-500 text-xs mt-0.5">{s.label}</p>
+              <p className="text-xl sm:text-2xl font-black text-slate-100">{s.value}</p>
+              <p className="text-slate-500 text-[10px] sm:text-xs mt-0.5">{s.label}</p>
             </motion.div>
           ))}
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-4 mb-6">
-          <button 
-            onClick={() => setActiveTab('users')} 
-            className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'users' ? 'bg-indigo-600 text-white' : 'bg-slate-100/5 text-slate-400 hover:bg-slate-100/10 hover:text-slate-100'}`}
-          >
-            Users
-          </button>
-          <button 
-            onClick={() => setActiveTab('payments')} 
-            className={`px-6 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'payments' ? 'bg-indigo-600 text-white' : 'bg-slate-100/5 text-slate-400 hover:bg-slate-100/10 hover:text-slate-100'}`}
-          >
-            Pending Payments
-            {payments.filter(p => p.status === 'pending').length > 0 && (
-              <span className="bg-amber-500 text-white text-[10px] px-2 py-0.5 rounded-full">{payments.filter(p => p.status === 'pending').length}</span>
-            )}
-          </button>
-          <button 
-            onClick={() => setActiveTab('support')} 
-            className={`px-6 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'support' ? 'bg-indigo-600 text-white' : 'bg-slate-100/5 text-slate-400 hover:bg-slate-100/10 hover:text-slate-100'}`}
-          >
-            Support Tickets
-            {tickets.filter(t => t.status !== 'resolved').length > 0 && (
-              <span className="bg-indigo-500 text-white text-[10px] px-2 py-0.5 rounded-full">
-                {tickets.filter(t => t.status !== 'resolved').length}
-              </span>
-            )}
-          </button>
-          <button 
-            onClick={() => setActiveTab('settings')} 
-            className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'settings' ? 'bg-indigo-600 text-white' : 'bg-slate-100/5 text-slate-400 hover:bg-slate-100/10 hover:text-slate-100'}`}
-          >
-            Settings
-          </button>
+        {/* Tabs — horizontally scrollable on mobile */}
+        <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0 mb-6">
+          <div className="flex gap-2 sm:gap-3 min-w-max sm:min-w-0">
+            {TABS.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-4 sm:px-6 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
+                  activeTab === tab.id
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-slate-100/5 text-slate-400 hover:bg-slate-100/10 hover:text-slate-100'
+                }`}
+              >
+                {tab.label}
+                {tab.badge > 0 && (
+                  <span className={`text-white text-[10px] px-1.5 py-0.5 rounded-full ${tab.id === 'payments' ? 'bg-amber-500' : 'bg-indigo-500'}`}>
+                    {tab.badge}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Tab Content */}
-        <div className="mt-8">
+        <div className="mt-4 sm:mt-8">
+
+          {/* ── USERS TAB ── */}
           {activeTab === 'users' && (
             <>
               {/* Search */}
-              <div className="relative mb-6">
+              <div className="relative mb-5 sm:mb-6">
                 <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
                 <input
                   value={search} onChange={e => setSearch(e.target.value)}
@@ -434,7 +474,7 @@ export default function AdminPage() {
                 />
               </div>
 
-              {/* Users Table */}
+              {/* Users List */}
               {filtered.length === 0 ? (
                 <div className="text-center py-20 text-slate-500">
                   <Users size={40} className="mx-auto mb-4 opacity-30" />
@@ -452,20 +492,22 @@ export default function AdminPage() {
                     return (
                       <div key={u.id} className="space-y-2">
                         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
-                          className={`flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 rounded-2xl border transition-all group ${
+                          className={`p-4 sm:p-5 rounded-2xl border transition-all group ${
                             isExpanded ? 'bg-indigo-500/5 border-indigo-500/30' : 'bg-slate-100/3 border-slate-100/8 hover:border-indigo-500/20'
                           }`}>
-                          <div className="flex items-center gap-4 flex-1 min-w-0">
+                          
+                          {/* User info row */}
+                          <div className="flex items-center gap-3 sm:gap-4 mb-3 sm:mb-0">
                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 font-black text-sm ${
                               u.plan === 'agency' ? 'bg-amber-500/20 text-amber-400' : 'bg-indigo-500/15 text-indigo-400'
                             }`}>
                               {u.email[0].toUpperCase()}
                             </div>
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2">
-                                <p className="text-slate-100 font-bold text-sm truncate">{u.email}</p>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="text-slate-100 font-bold text-sm truncate max-w-[200px] sm:max-w-none">{u.email}</p>
                                 {u.plan === 'agency' && members.length > 0 && (
-                                  <span className="text-[8px] font-black bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-1.5 py-0.5 rounded uppercase tracking-tighter">
+                                  <span className="text-[8px] font-black bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-1.5 py-0.5 rounded uppercase tracking-tighter flex-shrink-0">
                                     {members.length} Members
                                   </span>
                                 )}
@@ -474,58 +516,66 @@ export default function AdminPage() {
                                 <span>Joined: {u.date_joined ? new Date(u.date_joined).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Recently'}</span>
                                 {' · '}Expires:{' '}
                                 {u.expiresAt?.startsWith('2099') ? (
-                                  <span className="text-emerald-400 font-black">Lifetime Access ∞</span>
+                                  <span className="text-emerald-400 font-black">Lifetime ∞</span>
                                 ) : (
                                   <span className={isExpired ? 'text-red-400' : isExpiringSoon ? 'text-amber-400' : 'text-slate-500'}>{u.expiresAt}</span>
                                 )}
                               </p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-3 flex-shrink-0">
-                            {u.plan === 'agency' && (
-                              <button 
-                                onClick={() => toggleAgency(u.email)}
-                                className={`flex items-center gap-2 px-3 py-1 rounded-lg text-[10px] font-bold transition-all border ${
-                                  isExpanded ? 'bg-indigo-500-white border-indigo-500' : 'bg-slate-100/5 text-slate-400 border-slate-100/10 hover:bg-slate-100/10'
-                                }`}
-                              >
-                                <Users size={12} /> {isExpanded ? 'Hide Team' : 'View Team'}
-                              </button>
-                            )}
-                            <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-black uppercase tracking-wider ${cfg.color}`}>
-                              {cfg.icon} {cfg.label}
-                            </span>
-                            <div className="flex items-center gap-1.5 pl-3 border-l border-border-base">
-                              <button onClick={() => setEditUser(u)} className="w-9 h-9 rounded-xl bg-bg-card hover:bg-bg-hover text-slate-400 hover:text-slate-100 flex items-center justify-center transition-all">
+
+                          {/* Actions row — wraps on mobile */}
+                          <div className="flex items-center justify-between gap-2 sm:mt-0 mt-1 sm:float-right sm:flex-row">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {u.plan === 'agency' && (
+                                <button
+                                  onClick={() => toggleAgency(u.email)}
+                                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all border ${
+                                    isExpanded ? 'bg-indigo-500/10 text-indigo-300 border-indigo-500' : 'bg-slate-100/5 text-slate-400 border-slate-100/10 hover:bg-slate-100/10'
+                                  }`}
+                                >
+                                  <Users size={11} /> {isExpanded ? 'Hide' : 'Team'}
+                                </button>
+                              )}
+                              <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-black uppercase tracking-wider ${cfg.color}`}>
+                                {cfg.icon} {cfg.label}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5 pl-2 border-l border-border-base">
+                              <button onClick={() => setEditUser(u)} className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-bg-card hover:bg-bg-hover text-slate-400 hover:text-slate-100 flex items-center justify-center transition-all">
                                 <Edit2 size={14} />
                               </button>
-                              <button onClick={() => deleteUser(u.id)} className="w-9 h-9 rounded-xl bg-bg-card hover:bg-red-500/20 text-slate-400 hover:text-red-400 flex items-center justify-center transition-all">
+                              <button onClick={() => deleteUser(u.id)} className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-bg-card hover:bg-red-500/20 text-slate-400 hover:text-red-400 flex items-center justify-center transition-all">
                                 <Trash2 size={14} />
                               </button>
                             </div>
                           </div>
+
+                          {/* Clear float */}
+                          <div className="clear-both" />
                         </motion.div>
+
                         {/* Nested Members List */}
                         <AnimatePresence>
                           {isExpanded && (
-                            <motion.div 
-                              initial={{ opacity: 0, height: 0 }} 
-                              animate={{ opacity: 1, height: 'auto' }} 
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
                               exit={{ opacity: 0, height: 0 }}
-                              className="ml-12 space-y-2 overflow-hidden"
+                              className="ml-4 sm:ml-12 space-y-2 overflow-hidden"
                             >
                               {members.map((m, mi) => (
                                 <div key={m.id} className="flex items-center justify-between p-3 pl-4 rounded-xl bg-bg-hover border border-border-base">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-6 h-6 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500">
+                                  <div className="flex items-center gap-3 min-w-0">
+                                    <div className="w-6 h-6 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500 flex-shrink-0">
                                       <Zap size={10} />
                                     </div>
-                                    <div>
-                                      <p className="text-slate-200 font-bold text-xs">{m.email}</p>
-                                      <p className="text-[8px] text-slate-500 uppercase font-black tracking-widest mt-0.5">Agency Member · Shared Resources</p>
+                                    <div className="min-w-0">
+                                      <p className="text-slate-200 font-bold text-xs truncate">{m.email}</p>
+                                      <p className="text-[8px] text-slate-500 uppercase font-black tracking-widest mt-0.5">Agency Member</p>
                                     </div>
                                   </div>
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-1 flex-shrink-0">
                                     <button onClick={() => setEditUser(m)} className="p-2 text-slate-500 hover:text-slate-100 transition-colors"><Edit2 size={12} /></button>
                                     <button onClick={() => deleteUser(m.id)} className="p-2 text-slate-500 hover:text-red-400 transition-colors"><Trash2 size={12} /></button>
                                   </div>
@@ -542,6 +592,7 @@ export default function AdminPage() {
             </>
           )}
 
+          {/* ── PAYMENTS TAB ── */}
           {activeTab === 'payments' && (
             <div className="space-y-4">
               {payments.length === 0 ? (
@@ -551,15 +602,23 @@ export default function AdminPage() {
               ) : (
                 payments.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((p, i) => (
                   <motion.div key={i} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
-                    className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 rounded-2xl bg-bg-card border border-border-base hover:border-indigo-500/20 transition-all">
-                    <div className="flex flex-col min-w-0">
-                      <p className="text-slate-100 font-bold text-sm truncate">{p.email} <span className="text-slate-400 font-normal ml-2">requested</span> <span className="text-indigo-400">{(p.plan || '').toUpperCase()}</span></p>
-                      <p className="text-slate-500 text-xs mt-1">Tx ID: <span className="text-slate-100 font-mono bg-bg-hover px-2 py-0.5 rounded">{p.amount || '—'}</span></p>
+                    className="p-4 sm:p-5 rounded-2xl bg-bg-card border border-border-base hover:border-indigo-500/20 transition-all">
+                    
+                    {/* Payment info */}
+                    <div className="mb-3">
+                      <p className="text-slate-100 font-bold text-sm break-all">
+                        {p.email} <span className="text-slate-400 font-normal">requested</span> <span className="text-indigo-400">{(p.plan || '').toUpperCase()}</span>
+                      </p>
+                      <p className="text-slate-500 text-xs mt-1">
+                        Tx ID: <span className="text-slate-100 font-mono bg-bg-hover px-2 py-0.5 rounded">{p.amount || '—'}</span>
+                      </p>
                     </div>
-                    <div className="flex items-center gap-3 flex-shrink-0">
+
+                    {/* Payment actions */}
+                    <div className="flex items-center gap-2 flex-wrap">
                       {p.proof && (
                         <button onClick={() => setSelectedProof(p.proof)} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 text-xs font-bold transition-all border border-indigo-500/20">
-                          <ImageIcon size={14} /> View Proof
+                          <ImageIcon size={13} /> View Proof
                         </button>
                       )}
                       {p.status === 'pending' ? (
@@ -579,23 +638,22 @@ export default function AdminPage() {
             </div>
           )}
 
-
-
+          {/* ── SETTINGS TAB ── */}
           {activeTab === 'settings' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-              <div className="bg-bg-card border border-border-base rounded-3xl p-8">
-                <h2 className="text-xl font-black text-slate-100 mb-2">Global SMTP Configuration</h2>
-                <p className="text-slate-400 text-sm mb-2">This SMTP account will be used to send all system emails, including OTPs and Password Recovery codes.</p>
-                <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-indigo-500/8 border border-indigo-500/20 mb-8">
+              <div className="bg-bg-card border border-border-base rounded-2xl sm:rounded-3xl p-5 sm:p-8">
+                <h2 className="text-lg sm:text-xl font-black text-slate-100 mb-2">Global SMTP Configuration</h2>
+                <p className="text-slate-400 text-sm mb-4">This SMTP account sends all system emails, OTPs and Password Recovery codes.</p>
+                <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-indigo-500/8 border border-indigo-500/20 mb-6">
                   <AlertCircle size={14} className="text-indigo-400 mt-0.5 flex-shrink-0" />
                   <p className="text-indigo-300/80 text-xs leading-relaxed">
-                    <strong>Gmail users:</strong> Use an <strong>App Password</strong> (not your account password). Enable 2FA on your Google account, then go to Google Account → Security → App Passwords to generate one.
+                    <strong>Gmail users:</strong> Use an <strong>App Password</strong> (not your account password). Enable 2FA then go to Google Account → Security → App Passwords.
                     <br />
-                    <strong>Custom / cPanel / Hosting mail:</strong> Use your regular email account password.
+                    <strong>Custom / cPanel:</strong> Use your regular email account password.
                   </p>
                 </div>
-                
-                <div className="grid md:grid-cols-2 gap-6">
+
+                <div className="grid sm:grid-cols-2 gap-4 sm:gap-6">
                   <div>
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">SMTP Host</label>
                     <input type="text" value={systemConfig.host} onChange={e => { setSystemConfig({...systemConfig, host: e.target.value}); setSmtpStatus('idle'); }} className="modal-input" placeholder="smtp.gmail.com" />
@@ -612,9 +670,9 @@ export default function AdminPage() {
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">
                       Password
                       {systemConfig.host.toLowerCase().includes('gmail') ? (
-                        <span className="ml-2 normal-case text-amber-400 font-semibold">(Gmail: use App Password)</span>
+                        <span className="ml-2 normal-case text-amber-400 font-semibold">(App Password)</span>
                       ) : (
-                        <span className="ml-2 normal-case text-emerald-400/70 font-semibold">(use your email account password)</span>
+                        <span className="ml-2 normal-case text-emerald-400/70 font-semibold">(email password)</span>
                       )}
                     </label>
                     <div className="relative">
@@ -635,16 +693,16 @@ export default function AdminPage() {
                       </button>
                     </div>
                   </div>
-                  <div>
+                  <div className="sm:col-span-2">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">Sender Name</label>
                     <input type="text" value={systemConfig.senderName} onChange={e => { setSystemConfig({...systemConfig, senderName: e.target.value}); setSmtpStatus('idle'); }} className="modal-input" placeholder="OutreachPro Security" />
                   </div>
                 </div>
 
-                {/* SMTP Connection Status Banner */}
+                {/* SMTP Status */}
                 {smtpStatus === 'ok' && (
                   <div className="mt-6 flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm font-bold">
-                    <CheckCircle2 size={16} /> SMTP connection verified — settings are ready to save.
+                    <CheckCircle2 size={16} /> SMTP connection verified — ready to save.
                   </div>
                 )}
                 {smtpStatus === 'error' && (
@@ -653,11 +711,10 @@ export default function AdminPage() {
                       <AlertCircle size={16} /> SMTP Connection Failed
                     </div>
                     <p className="text-red-400/80 text-xs font-medium">{smtpError}</p>
-                    <p className="text-slate-500 text-[10px] mt-2">Check your App Password, port, and that 2FA + App Passwords are enabled on Google.</p>
                   </div>
                 )}
 
-                <div className="mt-8 pt-8 border-t border-border-base flex items-center justify-between gap-4">
+                <div className="mt-6 sm:mt-8 pt-5 sm:pt-8 border-t border-border-base flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                   <button
                     onClick={async () => {
                       const { host, port, user, pass, senderName } = systemConfig;
@@ -689,7 +746,7 @@ export default function AdminPage() {
                       setSmtpTesting(false);
                     }}
                     disabled={smtpTesting}
-                    className="px-6 py-3 rounded-xl bg-slate-100/5 hover:bg-slate-100/10 border border-slate-100/10 text-slate-300 hover:text-white font-bold text-sm transition-all flex items-center gap-2 disabled:opacity-50"
+                    className="w-full sm:w-auto px-6 py-3 rounded-xl bg-slate-100/5 hover:bg-slate-100/10 border border-slate-100/10 text-slate-300 hover:text-white font-bold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                   >
                     {smtpTesting ? <><RefreshCw size={14} className="animate-spin" /> Testing...</> : <><Shield size={14} /> Test Connection</>}
                   </button>
@@ -713,21 +770,17 @@ export default function AdminPage() {
                         setSmtpError('Invalid email address.');
                         return;
                       }
-                      // Save to localStorage for fast access
                       localStorage.setItem('outreachpro_system_config', JSON.stringify(systemConfig));
-                      // Also persist to Django backend so all browsers/sessions can read it
                       setSmtpTesting(true);
                       try {
                         const existingList = await apiFetch('/config/');
                         const payload = { host: systemConfig.host, port: systemConfig.port, smtp_user: systemConfig.user, smtp_pass: systemConfig.pass, senderName: systemConfig.senderName };
                         if (existingList && existingList.length > 0) {
-                          // Update the last config record
                           await apiFetch(`/config/${existingList[existingList.length - 1].id}/`, {
                             method: 'PUT',
                             body: JSON.stringify(payload)
                           });
                         } else {
-                          // Create a new config record
                           await apiFetch('/config/', {
                             method: 'POST',
                             body: JSON.stringify(payload)
@@ -737,53 +790,52 @@ export default function AdminPage() {
                         setSmtpError('');
                         showToast('✅ SMTP configuration saved!', 'success');
                       } catch (err: any) {
-                        console.error("Failed to save config to backend:", err);
                         setSmtpStatus('error');
                         setSmtpError(err.message || 'Failed to save configuration to the database.');
                       }
                       setSmtpTesting(false);
                     }}
                     disabled={smtpTesting}
-                    className="px-8 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm transition-all flex items-center gap-2 disabled:opacity-50"
+                    className="w-full sm:w-auto px-8 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                   >
                     {smtpTesting ? <><RefreshCw size={14} className="animate-spin" /> Verifying...</> : 'Save Global Settings'}
                   </button>
                 </div>
               </div>
 
-              {/* Dedicated Admin Management */}
-              <div className="mt-8 bg-bg-card border border-border-base rounded-3xl p-8">
-                <div className="flex items-center justify-between mb-6">
+              {/* Platform Administrators */}
+              <div className="bg-bg-card border border-border-base rounded-2xl sm:rounded-3xl p-5 sm:p-8">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
                   <div>
-                    <h2 className="text-xl font-black text-slate-100">Platform Administrators</h2>
+                    <h2 className="text-lg sm:text-xl font-black text-slate-100">Platform Administrators</h2>
                     <p className="text-slate-400 text-sm mt-1">Manage staff accounts with full system access.</p>
                   </div>
-                  <button 
+                  <button
                     onClick={() => {
                       setNewUser({...newUser, plan: 'admin', expiresAt: '2099-12-31'});
                       setShowAddModal(true);
                     }}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-bold text-xs transition-all border border-rose-500/20"
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-bold text-xs transition-all border border-rose-500/20 self-start sm:self-auto"
                   >
-                    <Plus size={14} /> Provision New Admin
+                    <Plus size={14} /> Provision Admin
                   </button>
                 </div>
 
                 <div className="space-y-3">
                   {users.filter(u => u.plan === 'admin').map((admin, idx) => (
                     <div key={idx} className="flex items-center justify-between p-4 rounded-2xl bg-bg-card border border-border-base hover:border-rose-500/10 transition-all">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-rose-500/15 flex items-center justify-center text-rose-400">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-rose-500/15 flex items-center justify-center text-rose-400 flex-shrink-0">
                           <Shield size={18} />
                         </div>
-                        <div>
-                          <p className="text-slate-100 font-bold text-sm">{admin.email}</p>
-                          <p className="text-slate-500 text-[10px] uppercase font-bold tracking-widest mt-0.5">Staff Member · Full Access</p>
+                        <div className="min-w-0">
+                          <p className="text-slate-100 font-bold text-sm truncate">{admin.email}</p>
+                          <p className="text-slate-500 text-[10px] uppercase font-bold tracking-widest mt-0.5">Staff · Full Access</p>
                         </div>
                       </div>
-                      <button 
+                      <button
                         onClick={() => deleteUser(admin.id)}
-                        className="w-9 h-9 rounded-xl bg-slate-100/5 hover:bg-red-500/20 text-slate-500 hover:text-red-400 flex items-center justify-center transition-all"
+                        className="w-9 h-9 rounded-xl bg-slate-100/5 hover:bg-red-500/20 text-slate-500 hover:text-red-400 flex items-center justify-center transition-all flex-shrink-0"
                       >
                         <Trash2 size={14} />
                       </button>
@@ -799,18 +851,19 @@ export default function AdminPage() {
             </motion.div>
           )}
 
+          {/* ── SUPPORT TAB ── */}
           {activeTab === 'support' && (
             <div className="space-y-6">
-              <div className="flex items-center justify-between mb-8">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 sm:mb-8">
                 <div>
-                  <h2 className="text-xl font-bold text-slate-100 uppercase tracking-tighter">Direct Support Hub</h2>
+                  <h2 className="text-lg sm:text-xl font-bold text-slate-100 uppercase tracking-tighter">Direct Support Hub</h2>
                   <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Queries for: ceo@a-s-solution.online</p>
                 </div>
-                <span className="badge-saas bg-indigo-500/10 text-indigo-400 border-indigo-500/20 px-3 py-1 rounded-full text-xs font-bold">
-                  {tickets.filter(t => t.status !== 'resolved').length} Pending Queries
+                <span className="badge-saas bg-indigo-500/10 text-indigo-400 border-indigo-500/20 px-3 py-1 rounded-full text-xs font-bold self-start sm:self-auto border">
+                  {pendingTickets} Pending
                 </span>
               </div>
-              
+
               <div className="grid gap-4">
                 {tickets.length > 0 ? (
                   [...tickets]
@@ -824,25 +877,25 @@ export default function AdminPage() {
                     .map((ticket, i) => {
                       const isPending = ticket.status !== 'resolved';
                       return (
-                        <div key={ticket.id || i} className="card-saas border-slate-100/5 p-6 hover:border-indigo-500/20 transition-all bg-slate-100/3 rounded-2xl border border-slate-100/8">
-                          <div className="flex justify-between items-start mb-4">
+                        <div key={ticket.id || i} className="p-5 sm:p-6 hover:border-indigo-500/20 transition-all bg-slate-100/3 rounded-2xl border border-slate-100/8">
+                          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
                             <div className="flex items-center gap-4">
-                              <div className="w-10 h-10 rounded-xl bg-slate-100/5 flex items-center justify-center text-indigo-400">
+                              <div className="w-10 h-10 rounded-xl bg-slate-100/5 flex items-center justify-center text-indigo-400 flex-shrink-0">
                                 <AlertCircle size={20} />
                               </div>
                               <div>
                                 <h3 className="text-slate-100 font-bold">{ticket.name || 'Anonymous'}</h3>
-                                <p className="text-xs text-slate-500">{ticket.email}</p>
+                                <p className="text-xs text-slate-500 break-all">{ticket.email}</p>
                               </div>
                             </div>
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest border ${
                                 isPending ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
                               }`}>
                                 {isPending ? 'pending' : 'resolved'}
                               </span>
                               {isPending && (
-                                <button 
+                                <button
                                   onClick={async () => {
                                     try {
                                       await apiFetch(`/tickets/${ticket.id}/`, { method: 'PATCH', body: JSON.stringify({ status: 'resolved' }) });
@@ -857,7 +910,7 @@ export default function AdminPage() {
                                   Resolve
                                 </button>
                               )}
-                              <button 
+                              <button
                                 onClick={async () => {
                                   try {
                                     await apiFetch(`/tickets/${ticket.id}/`, { method: 'DELETE' });
@@ -892,6 +945,7 @@ export default function AdminPage() {
               </div>
             </div>
           )}
+
         </div>
       </div>
 
@@ -947,7 +1001,7 @@ export default function AdminPage() {
         {editUser && (
           <Modal onClose={() => setEditUser(null)} title="Edit User">
             <div className="space-y-4">
-              <Field label="Email"><p className="text-indigo-400 font-bold text-sm py-2">{editUser.email}</p></Field>
+              <Field label="Email"><p className="text-indigo-400 font-bold text-sm py-2 break-all">{editUser.email}</p></Field>
               <Field label="Plan">
                 <PlanSelect value={editUser.plan} onChange={v => setEditUser({ ...editUser, plan: v as Plan })} />
               </Field>
@@ -978,25 +1032,26 @@ export default function AdminPage() {
         )}
       </AnimatePresence>
 
+      {/* Payment Proof Lightbox */}
       <AnimatePresence>
         {selectedProof && (
-          <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-bg-base/90 backdrop-blur-md" onClick={() => setSelectedProof(null)}>
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }} 
-              animate={{ opacity: 1, scale: 1 }} 
+          <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 sm:p-6 bg-bg-base/90 backdrop-blur-md" onClick={() => setSelectedProof(null)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
               className="relative max-w-4xl w-full max-h-[90vh] flex flex-col items-center"
               onClick={e => e.stopPropagation()}
             >
-              <button 
+              <button
                 onClick={() => setSelectedProof(null)}
-                className="absolute -top-12 right-0 p-2 text-slate-100/50 hover:text-slate-100 transition-colors"
+                className="absolute -top-10 sm:-top-12 right-0 p-2 text-slate-100/50 hover:text-slate-100 transition-colors"
               >
                 <X size={24} />
               </button>
-              <img 
-                src={selectedProof} 
-                alt="Payment Proof" 
+              <img
+                src={selectedProof}
+                alt="Payment Proof"
                 className="w-full h-full object-contain rounded-2xl shadow-2xl"
               />
             </motion.div>
@@ -1013,12 +1068,16 @@ export default function AdminPage() {
 
 function Modal({ children, onClose, title }: { children: React.ReactNode; onClose: () => void; title: string }) {
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-bg-base/80 backdrop-blur-sm">
-      <motion.div initial={{ opacity: 0, scale: 0.93, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.93 }}
-        className="bg-bg-card border border-slate-100/10 rounded-3xl p-8 max-w-md w-full shadow-2xl">
+    <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-0 sm:p-6 bg-bg-base/80 backdrop-blur-sm">
+      <motion.div
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 40 }}
+        className="bg-bg-card border border-slate-100/10 rounded-t-3xl sm:rounded-3xl p-6 sm:p-8 w-full sm:max-w-md shadow-2xl max-h-[90vh] overflow-y-auto"
+      >
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-lg font-black text-slate-100">{title}</h2>
-          <button onClick={onClose} className="w-8 h-8 rounded-xl bg-slate-100/5 hover:bg-slate-100/10 flex items-center justify-center text-slate-400 hover:text-slate-100 transition-all">
+          <button onClick={onClose} className="w-8 h-8 rounded-xl bg-slate-100/5 hover:bg-slate-100/10 flex items-center justify-center text-slate-400 hover:text-slate-100 transition-all flex-shrink-0">
             <X size={14} />
           </button>
         </div>
@@ -1038,12 +1097,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 function PlanSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const handlePlanChange = (newPlan: string) => {
-    onChange(newPlan);
-  };
-
   return (
-    <select value={value} onChange={e => handlePlanChange(e.target.value)}
+    <select value={value} onChange={e => onChange(e.target.value)}
       className="w-full bg-slate-100/5 border border-slate-100/10 rounded-xl px-4 py-2.5 text-slate-100 text-sm outline-none focus:border-indigo-500/50 transition-colors appearance-none cursor-pointer">
       <option value="free" className="bg-bg-base">Basic — $0</option>
       <option value="starter" className="bg-bg-base">Starter — $24/mo</option>
@@ -1056,11 +1111,11 @@ function PlanSelect({ value, onChange }: { value: string; onChange: (v: string) 
 
 function Toast({ msg, type }: { msg: string; type: 'success' | 'error' }) {
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: -20, x: 20 }}
       animate={{ opacity: 1, y: 0, x: 0 }}
       exit={{ opacity: 0, y: -20, x: 20 }}
-      className={`fixed top-6 right-6 z-[300] min-w-[300px] max-w-sm px-5 py-4 rounded-xl shadow-2xl backdrop-blur-xl flex items-center gap-3 border ${
+      className={`fixed top-4 right-4 left-4 sm:left-auto z-[300] sm:min-w-[300px] sm:max-w-sm px-5 py-4 rounded-xl shadow-2xl backdrop-blur-xl flex items-center gap-3 border ${
         type === 'success' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-400'
       }`}
     >
