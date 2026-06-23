@@ -124,12 +124,7 @@ export default function EmailAutomator() {
     }
   }, []);
 
-  // Sync config user with session user whenever session changes
-  useEffect(() => {
-    if (sessionUser) {
-      setConfig(prev => ({ ...prev, user: sessionUser }));
-    }
-  }, [sessionUser]);
+  // Sync config user with session user is handled inside loadAll now to prevent race conditions
 
   // Hydrate userPlan from localStorage cache immediately after mount
   // Only apply the cache if the email matches the current session to prevent stale plan data
@@ -414,6 +409,11 @@ export default function EmailAutomator() {
         const loggedUser = sessionStorage.getItem('outreachpro_session');
         if (loggedUser) parsed.user = loggedUser;
         setConfig(parsed);
+      } else {
+        const loggedUser = sessionStorage.getItem('outreachpro_session');
+        if (loggedUser) {
+          setConfig(prev => ({ ...prev, user: loggedUser }));
+        }
       }
 
       // Mark as loaded so saves can safely fire
