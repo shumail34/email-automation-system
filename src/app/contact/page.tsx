@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, MessageSquare, Send, CheckCircle2, AlertCircle, LifeBuoy, Zap, Globe, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import Navbar from '../../components/Navbar';
+import { BACKEND_URL } from '@/lib/backend';
 
 export default function ContactPage() {
   const [sessionUser, setSessionUser] = React.useState<string | null>(null);
@@ -38,7 +39,7 @@ export default function ContactPage() {
     
     try {
       // 1. Post to Django API so Admin can see it in the DB
-      await fetch('http://localhost:8000/api/tickets/', {
+      await fetch(`${BACKEND_URL}/api/tickets/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
@@ -51,7 +52,7 @@ export default function ContactPage() {
         if (localCfg) {
           sysConfig = JSON.parse(localCfg);
         } else {
-          const cfgList = await fetch('http://localhost:8000/api/config/');
+          const cfgList = await fetch(`${BACKEND_URL}/api/config/`);
           if (cfgList.ok) {
             const cfgData = await cfgList.json();
             if (cfgData && cfgData.length > 0) {
