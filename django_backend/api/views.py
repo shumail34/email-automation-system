@@ -232,6 +232,14 @@ def record_lead_usage(request):
     except User.DoesNotExist:
         return Response({'message': 'User not found'}, status=404)
 
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def health_check(request):
+    """
+    Simple health check endpoint to ping the backend and wake it up from cold start.
+    """
+    return Response({'status': 'ok', 'message': 'Backend is awake and ready.'})
+
 class SystemConfigViewSet(viewsets.ModelViewSet):
     queryset = SystemConfig.objects.all()
     serializer_class = SystemConfigSerializer

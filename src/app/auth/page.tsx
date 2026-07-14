@@ -7,6 +7,8 @@ import { useRouter } from 'next/navigation';
 import { generateIntegrityHash } from '../../lib/plans';
 import ThemeToggle from '../../components/ThemeToggle';
 import { BACKEND_URL } from '@/lib/backend';
+import { apiClient, checkBackendHealth } from '@/lib/apiClient';
+import ColdStartLoader from '@/components/ColdStartLoader';
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -25,7 +27,31 @@ export default function AuthPage() {
   const [loginAttempts, setLoginAttempts] = useState(0);
   const [lockedUntil, setLockedUntil] = useState<number | null>(null);
   const [timeLeft, setTimeLeft] = useState(0);
+  const [isWakingUp, setIsWakingUp] = useState(false);
+  const [wakeUpFailed, setWakeUpFailed] = useState(false);
   const router = useRouter();
+
+  React.useEffect(() => {
+    const handleColdStartDetected = () => setIsWakingUp(true);
+    const handleColdStartResolved = () => {
+      setIsWakingUp(false);
+      setWakeUpFailed(false);
+    };
+    const handleColdStartFailed = () => {
+      setIsWakingUp(false);
+      setWakeUpFailed(true);
+    };
+
+    window.addEventListener('cold-start-detected', handleColdStartDetected);
+    window.addEventListener('cold-start-resolved', handleColdStartResolved);
+    window.addEventListener('cold-start-failed', handleColdStartFailed);
+
+    return () => {
+      window.removeEventListener('cold-start-detected', handleColdStartDetected);
+      window.removeEventListener('cold-start-resolved', handleColdStartResolved);
+      window.removeEventListener('cold-start-failed', handleColdStartFailed);
+    };
+  }, []);
 
   React.useEffect(() => {
     if (!otpExpiry) return;
@@ -237,15 +263,20 @@ export default function AuthPage() {
       }
 
       try {
-        // Standard Django JWT Login
-        const loginRes = await fetch(`${BACKEND_URL}/api/token/`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: email.toLowerCase(), password })
+        // Ping health check first (Optional Enhancement)
+        const isAwake = await checkBackendHealth();
+        if (!isAwake) {
+           setIsWakingUp(true);
+        }
+
+        // Use the new apiClient which handles cold-start retries automatically
+        const loginRes = await apiClient.post('/token/', { 
+          email: email.toLowerCase(), 
+          password 
         });
 
-        if (loginRes.ok) {
-          const tokens = await loginRes.json();
+        if (loginRes.status === 200) {
+          const tokens = loginRes.data;
           sessionStorage.setItem('outreachpro_access', tokens.access);
           sessionStorage.setItem('outreachpro_refresh', tokens.refresh);
           sessionStorage.setItem('outreachpro_session', email.toLowerCase());
@@ -255,12 +286,10 @@ export default function AuthPage() {
 
           // Check if admin or free user for redirection
           let isFreePlan = false;
-          const userRes = await fetch(`${BACKEND_URL}/api/users/?email=${encodeURIComponent(email)}`, {
-            headers: { 'Authorization': `Bearer ${tokens.access}` }
-          });
+          const userRes = await apiClient.get(`/users/?email=${encodeURIComponent(email)}`);
           
-          if (userRes.ok) {
-             const usersList = await userRes.json();
+          if (userRes.status === 200) {
+             const usersList = userRes.data;
              const currentUser = usersList.find((u: any) => u.email.toLowerCase() === email.toLowerCase());
              if (currentUser) {
                 if (currentUser.plan === 'admin') {
@@ -280,8 +309,10 @@ export default function AuthPage() {
           } else {
             setTimeout(() => router.push('/'), 1000);
           }
-        } else {
-          // Increment failed attempts
+        }
+      } catch (err: any) {
+        // Check if this was a 401 error caught by axios
+        if (err.response && err.response.status === 401) {
           const newAttempts = loginAttempts + 1;
           setLoginAttempts(newAttempts);
           if (newAttempts >= 5) {
@@ -291,9 +322,9 @@ export default function AuthPage() {
           } else {
             showToast(`Invalid email or password (${5 - newAttempts} attempts left)`, 'error');
           }
+        } else if (!isWakingUp) {
+          showToast('Backend API is unreachable', 'error');
         }
-      } catch (err) {
-        showToast('Backend API is unreachable', 'error');
       }
     } else {
       // Start OTP Flow instead of immediate creation
@@ -314,6 +345,24 @@ export default function AuthPage() {
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/10 blur-[120px] rounded-full" />
       </div>
+
+      <ColdStartLoader isOpen={isWakingUp} />
+
+      {wakeUpFailed && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] bg-red-500/10 border border-red-500/20 backdrop-blur-xl px-6 py-4 rounded-xl flex items-center gap-4 shadow-2xl">
+          <AlertCircle className="text-red-500" />
+          <div className="text-sm">
+            <p className="font-bold text-red-500">Unable to connect to the server.</p>
+            <p className="text-red-400">Please wait two to three minutes and try again.</p>
+          </div>
+          <button 
+            onClick={() => setWakeUpFailed(false)}
+            className="ml-4 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-8">
